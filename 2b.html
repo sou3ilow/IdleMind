@@ -585,7 +585,7 @@ function step(dt) {
 
     // Continuous phase: slow during charge, fast during dash. No jump between cycles.
     const cycleIndex = Math.floor(now / cycle);
-    const slowTurnsPerCycle = 0.34;
+    const slowTurnsPerCycle = 0.51;
     const fastTurns = 0.82;
     const phaseInCycle = t < dashStart
       ? (charge * slowTurnsPerCycle)
@@ -618,12 +618,11 @@ function step(dt) {
 
       // Long comet trail: keep rear visible, but still brightest near the head.
       const decay = 0.18 + 0.82 * Math.pow(1 - p0, 1.15);
-      const movingBoost = t < dashStart ? 0.55 : 1.0;
 
       ctx.strokeStyle = i > segments - 5 ? "#ffffff" : color;
       ctx.shadowColor = i > segments - 5 ? "#ffffff" : color;
-      ctx.shadowBlur = (6 + 10 * decay) * (0.9 + dashGlow * 0.35);
-      ctx.globalAlpha = clamp(decay * 0.38 * (0.9 + dashGlow * 0.35) * movingBoost, 0, 0.72);
+      ctx.shadowBlur = 6 + 10 * decay;
+      ctx.globalAlpha = clamp(decay * 0.34, 0, 0.72);
       ctx.lineWidth = 1.4 + decay * 1.7;
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -753,7 +752,6 @@ function step(dt) {
 </script>
 </body>
 </html>
-
 
 
 
