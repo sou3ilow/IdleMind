@@ -311,10 +311,6 @@ function step(dt) {
       hitLines(b, red, 0, radius);
       hitLines(b, blue, FH, radius);
 
-      if (b.type === "split" && (red.lines.length < beforeRed || blue.lines.length < beforeBlue)) {
-        continue;
-      }
-
       const hitRed = hitTargets(b, red, 0, radius, "BLUE WIN");
       const hitBlue = hitTargets(b, blue, FH, radius, "RED WIN");
 
