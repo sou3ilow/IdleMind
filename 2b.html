@@ -633,10 +633,10 @@ function step(dt) {
     const hx = r;
     const hy = 0;
 
-    // Swell at the end of charge, then shrink during dash.
+    // Swell at the end of charge, then return to base size during dash.
     const chargePulse = Math.pow(charge, 4.0);
-    const dashShrink = t < dashStart ? 1 : (1 - 0.45 * dashT);
-    const pulse = 1 + chargePulse * 0.38 * dashShrink;
+    const dashReset = t < dashStart ? 1 : (1 - dashT);
+    const pulse = 1 + chargePulse * 0.38 * dashReset;
 
     // Filled disk, restrained size.
     const diskRadius = 2.6 * pulse;
@@ -657,7 +657,7 @@ function step(dt) {
     ctx.fillStyle = "#ffffff";
     ctx.shadowColor = color;
     ctx.shadowBlur = 14 + 20 * headGlow;
-    ctx.globalAlpha = clamp(0.74 + chargeGlow * 0.18 * dashShrink, 0, 1);
+    ctx.globalAlpha = clamp(0.74 + chargeGlow * 0.18 * dashReset, 0, 1);
     ctx.beginPath();
     ctx.arc(hx, hy, diskRadius, 0, Math.PI * 2);
     ctx.fill();
@@ -752,7 +752,6 @@ function step(dt) {
 </script>
 </body>
 </html>
-
 
 
 
