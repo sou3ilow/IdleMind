@@ -60,6 +60,14 @@
     split: "#7cff6b"
   };
 
+  function ballVisuals(type) {
+    const tint = TYPE_COLOR[type] || "#ffffff";
+    if (type === "normal") {
+      return { fill: "#ffffff", stroke: "#ffffff", trail: "#ffffff", shadowBlur: 8 };
+    }
+    return { fill: "#ffffff", stroke: tint, trail: tint, shadowBlur: 14 };
+  }
+
   let W = 1;
   let H = 1;
   let FH = 1;
@@ -667,13 +675,13 @@ function step(dt) {
 
   function drawBall(ball, index, now) {
     const radius = typeRadius(ball.type);
-    const color = "#ffffff";
+    const visuals = ballVisuals(ball.type);
 
     for (let i = 0; i < ball.trail.length; i++) {
       const p = ball.trail[i];
       ctx.save();
       ctx.globalAlpha = 0.14 * (1 - i / TRAIL_LENGTH);
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = visuals.trail;
       ctx.beginPath();
       ctx.arc(p.x, p.y, Math.max(1, radius - i * 0.65), 0, Math.PI * 2);
       ctx.fill();
@@ -681,13 +689,20 @@ function step(dt) {
     }
 
     ctx.save();
-    ctx.fillStyle = color;
+    ctx.fillStyle = visuals.fill;
     ctx.globalAlpha = ball.type === "small" ? 0.92 : 1;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = ball.type === "normal" ? 0 : 8;
+    ctx.shadowColor = visuals.stroke;
+    ctx.shadowBlur = visuals.shadowBlur;
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, radius, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.strokeStyle = visuals.stroke;
+    ctx.lineWidth = ball.type === "small" ? 1.6 : 2;
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, Math.max(1, radius - 1), 0, Math.PI * 2);
+    ctx.stroke();
 
     ctx.restore();
   }
@@ -752,7 +767,6 @@ function step(dt) {
 </script>
 </body>
 </html>
-
 
 
 
