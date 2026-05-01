@@ -627,6 +627,11 @@ function step(dt) {
       // Long comet trail: keep rear visible, but still brightest near the head.
       const decay = 0.18 + 0.82 * Math.pow(1 - p0, 1.15);
 
+      // Keep trail luminance strictly decay-driven (no pre-dash lift).
+      ctx.strokeStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 5 + 8 * decay;
+      ctx.globalAlpha = clamp(decay * 0.28, 0, 0.58);
       ctx.strokeStyle = i > segments - 5 ? "#ffffff" : color;
       ctx.shadowColor = i > segments - 5 ? "#ffffff" : color;
       ctx.shadowBlur = 6 + 10 * decay;
