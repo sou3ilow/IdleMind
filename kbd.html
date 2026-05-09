@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<title>Command Rush KBD</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root {
+    --ink: #232323;
+    --muted: #777;
+    --line: rgba(40, 40, 40, 0.22);
+    --panel: rgba(255, 255, 255, 0.74);
+    --accent: #ff4da6;
+  }
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: #fff;
+    color: var(--ink);
+    font-family: ui-rounded, "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    touch-action: none;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  body { position: fixed; inset: 0; }
+  button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    background: transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    min-height: 320px;
+    background: #fff;
+    isolation: isolate;
+  }
+  canvas#fx {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .hud {
+    position: absolute;
+    z-index: 3;
+    top: max(8px, env(safe-area-inset-top));
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    display: grid;
+    grid-template-columns: minmax(130px, 0.7fr) minmax(220px, 1.55fr) minmax(132px, 0.7fr);
+    align-items: start;
+    gap: 10px;
+  }
+  .card {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.055);
+    backdrop-filter: blur(14px);
+  }
+  .score {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 10px;
+    text-align: center;
+  }
+  .metric strong { display: block; font-size: clamp(17px, 2.7vw, 30px); line-height: 1; }
+  .metric span { display: block; margin-top: 3px; color: var(--muted); font-size: clamp(9px, 1.3vw, 12px); letter-spacing: 0.08em; }
+  .command-card { padding: 10px 12px 11px; text-align: center; }
+  .command-title {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 10px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    font-size: clamp(14px, 2vw, 22px);
+  }
+  .command-title small { color: var(--muted); font-size: 0.62em; font-weight: 800; }
+  .sequence {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(4px, 0.9vw, 8px);
+    margin-top: 9px;
+    min-height: 38px;
+    flex-wrap: wrap;
+  }
+  .token {
+    min-width: clamp(28px, 4.8vw, 46px);
+    height: clamp(28px, 4.8vw, 46px);
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(20,20,20,0.25);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.8);
+    font-weight: 900;
+    font-size: clamp(14px, 2.5vw, 23px);
+    line-height: 1;
+    transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+  }
+  .token.done { background: #202020; color: white; transform: scale(0.86); }
+  .token.current { border-color: var(--accent); color: var(--accent); transform: translateY(-2px) scale(1.08); box-shadow: 0 8px 18px rgba(255,77,166,0.18); }
+  .difficulty { padding: 9px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .difficulty button {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 4px;
+    color: var(--muted);
+    font-size: clamp(10px, 1.35vw, 13px);
+    font-weight: 900;
+    letter-spacing: 0.02em;
+  }
+  .difficulty button.active { background: #232323; color: #fff; border-color: #232323; }
+  .stage {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+  }
+  .ring {
+    width: min(26vw, 34vh, 180px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, #fff 0 47%, transparent 48%),
+      conic-gradient(from var(--spin, 0deg), #ff4da6, #ffda3a, #46e6ff, #7c5cff, #54ff98, #ff4da6);
+    filter: drop-shadow(0 14px 28px rgba(0,0,0,0.1));
+    animation: pulse 1.05s ease-in-out infinite;
+    opacity: 0.9;
+  }
+  .ring.burst { animation: burst 0.36s ease-out both; }
+  @keyframes pulse {
+    0%, 100% { transform: scale(0.94) rotate(0deg); }
+    50% { transform: scale(1.08) rotate(32deg); }
+  }
+  @keyframes burst {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.65); opacity: 0; }
+  }
+  .controls {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    pointer-events: none;
+  }
+  .dpad, .buttons {
+    position: absolute;
+    bottom: max(18px, env(safe-area-inset-bottom));
+    width: min(35vw, 260px);
+    height: min(35vw, 260px);
+    max-height: 60vh;
+    pointer-events: auto;
+  }
+  .dpad { left: max(18px, env(safe-area-inset-left)); }
+  .buttons { right: max(18px, env(safe-area-inset-right)); }
+  .key {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(20,20,20,0.27);
+    background: rgba(255,255,255,0.34);
+    color: #242424;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
+    transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
+  }
+  .key:active, .key.pressed { transform: scale(0.92); background: rgba(35,35,35,0.08); border-color: rgba(20,20,20,0.45); }
+  .dkey {
+    width: 33.333%;
+    height: 33.333%;
+    border-radius: 18%;
+    font-size: min(7vw, 42px);
+    font-weight: 800;
+  }
+  .dkey.up { left: 33.333%; top: 0; }
+  .dkey.left { left: 0; top: 33.333%; }
+  .dkey.right { right: 0; top: 33.333%; }
+  .dkey.down { left: 33.333%; bottom: 0; }
+  .dpad::after {
+    content: "";
+    position: absolute;
+    inset: 33.333%;
+    border: 1px solid rgba(20,20,20,0.18);
+    border-radius: 20%;
+  }
+  .abxy {
+    width: 31%;
+    height: 31%;
+    border-radius: 50%;
+    font-size: min(5.5vw, 34px);
+    font-weight: 950;
+  }
+  .abxy.y { left: 3%; top: 34.5%; }
+  .abxy.x { left: 34.5%; top: 3%; }
+  .abxy.b { right: 3%; top: 34.5%; }
+  .abxy.a { left: 34.5%; bottom: 3%; }
+  .hint {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    color: rgba(30,30,30,0.48);
+    font-size: clamp(10px, 1.4vw, 13px);
+    text-align: center;
+    pointer-events: none;
+  }
+  .toast {
+    position: absolute;
+    z-index: 5;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    font-size: clamp(34px, 8vw, 86px);
+    font-weight: 1000;
+    letter-spacing: 0.08em;
+    opacity: 0;
+    text-shadow: 0 14px 30px rgba(0,0,0,0.12);
+    pointer-events: none;
+  }
+  .toast.show { animation: pop 0.55s ease-out both; }
+  @keyframes pop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.65); }
+    22% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+    100% { opacity: 0; transform: translate(-50%, -62%) scale(1.22); }
+  }
+  .rotate {
+    display: none;
+    position: absolute;
+    z-index: 8;
+    inset: 0;
+    place-items: center;
+    padding: 24px;
+    background: rgba(255,255,255,0.92);
+    text-align: center;
+    font-size: 18px;
+    font-weight: 900;
+  }
+  @media (orientation: portrait) and (max-width: 820px) {
+    .rotate { display: grid; }
+  }
+  @media (max-height: 390px) {
+    .hud { grid-template-columns: 132px 1fr 142px; gap: 7px; }
+    .card { border-radius: 14px; }
+    .command-card { padding: 7px 9px; }
+    .sequence { margin-top: 5px; min-height: 30px; }
+    .token { min-width: 28px; height: 28px; font-size: 14px; }
+    .score, .difficulty { padding: 7px; }
+    .dpad, .buttons { width: min(28vw, 190px); height: min(28vw, 190px); bottom: 10px; }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <header class="hud" aria-live="polite">
+    <section class="score card" aria-label="スコア">
+      <div class="metric"><strong id="cleared">0</strong><span>CLEAR</span></div>
+      <div class="metric"><strong id="timer">30.0</strong><span>TIME</span></div>
+      <div class="metric"><strong id="combo">0</strong><span>COMBO</span></div>
+    </section>
+    <section class="command-card card">
+      <div class="command-title"><span id="moveName">波動拳</span><small id="moveNote">Hadoken</small></div>
+      <div class="sequence" id="sequence" aria-label="入力コマンド"></div>
+    </section>
+    <nav class="difficulty card" aria-label="難易度">
+      <button data-diff="50" class="active">50cc</button>
+      <button data-diff="100">100cc</button>
+      <button data-diff="150">150cc</button>
+    </nav>
+  </header>
+  <main class="stage"><div class="ring" id="ring"></div></main>
+  <section class="controls" aria-label="ゲーム入力">
+    <div class="dpad" aria-label="十字キー">
+      <button class="key dkey up" data-key="U" aria-label="上">▲</button>
+      <button class="key dkey left" data-key="L" aria-label="左">◀</button>
+      <button class="key dkey right" data-key="R" aria-label="右">▶</button>
+      <button class="key dkey down" data-key="D" aria-label="下">▼</button>
+    </div>
+    <div class="buttons" aria-label="ABXYボタン">
+      <button class="key abxy x" data-key="X" aria-label="X">X</button>
+      <button class="key abxy y" data-key="Y" aria-label="Y">Y</button>
+      <button class="key abxy b" data-key="B" aria-label="B">B</button>
+      <button class="key abxy a" data-key="A" aria-label="A">A</button>
+    </div>
+  </section>
+  <div class="hint">横持ち・両手操作 / キーボード: 矢印 + A B X Y / ミスで少しタイムロス</div>
+  <div class="toast" id="toast">NICE!</div>
+  <div class="rotate">スマホを横向きにして、左手で十字キー・右手でABXYを入力！</div>
+</div>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("fx");
+  const ctx = canvas.getContext("2d");
+  const ring = document.getElementById("ring");
+  const sequenceEl = document.getElementById("sequence");
+  const moveNameEl = document.getElementById("moveName");
+  const moveNoteEl = document.getElementById("moveNote");
+  const timerEl = document.getElementById("timer");
+  const clearedEl = document.getElementById("cleared");
+  const comboEl = document.getElementById("combo");
+  const toast = document.getElementById("toast");
+  const diffButtons = [...document.querySelectorAll("[data-diff]")];
+  const keyButtons = [...document.querySelectorAll("[data-key]")];
+
+  const COMMANDS = [
+    { name: "波動拳", note: "Hadoken", seq: ["D", "R", "A"] },
+    { name: "昇竜拳", note: "Shoryuken", seq: ["R", "D", "R", "B"] },
+    { name: "竜巻旋風脚", note: "Tatsumaki", seq: ["D", "L", "X"] },
+    { name: "コナミコマンド", note: "Konami", seq: ["U", "U", "D", "D", "L", "R", "L", "R", "B", "A"] },
+    { name: "百裂キック", note: "Lightning Legs", seq: ["B", "B", "B", "B", "Y"] },
+    { name: "ヨガフレイム", note: "Yoga Flame", seq: ["L", "D", "R", "Y"] },
+    { name: "ソニックブーム", note: "Sonic Boom", seq: ["L", "R", "A"] },
+    { name: "スクリュー", note: "Spinning Pile", seq: ["L", "D", "R", "U", "X"] }
+  ];
+  const DIFF = {
+    50: { time: 45, wrong: 0.4, label: "50cc" },
+    100: { time: 35, wrong: 0.75, label: "100cc" },
+    150: { time: 25, wrong: 1.1, label: "150cc" }
+  };
+  const LABEL = { U: "↑", D: "↓", L: "←", R: "→", A: "A", B: "B", X: "X", Y: "Y" };
+  const KEYMAP = {
+    ArrowUp: "U", ArrowDown: "D", ArrowLeft: "L", ArrowRight: "R",
+    KeyA: "A", KeyB: "B", KeyX: "X", KeyY: "Y"
+  };
+  const COLORS = ["#ff4da6", "#ffda3a", "#46e6ff", "#7c5cff", "#54ff98", "#ff7a45"];
+
+  let W = 1, H = 1, dpr = 1;
+  let difficulty = "50";
+  let timeLeft = DIFF[difficulty].time;
+  let current = null;
+  let cursor = 0;
+  let cleared = 0;
+  let combo = 0;
+  let lastT = performance.now();
+  let particles = [];
+  let gridDots = [];
+  let gridAngle = 0.25;
+  let gridHue = 310;
+  let gridSpeed = 34;
+  let gameOver = false;
+
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.max(1, Math.floor(W * dpr));
+    canvas.height = Math.max(1, Math.floor(H * dpr));
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    buildGrid();
+  }
+
+  function buildGrid() {
+    gridDots = [];
+    const gap = Math.max(24, Math.min(48, W / 18));
+    for (let y = -gap * 2; y < H + gap * 2; y += gap) {
+      for (let x = -gap * 2; x < W + gap * 2; x += gap) {
+        gridDots.push({ x, y, z: Math.random() * 1.8 + 0.2, phase: Math.random() * Math.PI * 2 });
+      }
+    }
+  }
+
+  function pickCommand() {
+    const pool = COMMANDS.filter(c => !current || c.name !== current.name);
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function renderCommand() {
+    moveNameEl.textContent = current.name;
+    moveNoteEl.textContent = current.note;
+    sequenceEl.replaceChildren(...current.seq.map((k, i) => {
+      const s = document.createElement("span");
+      s.className = "token" + (i < cursor ? " done" : i === cursor ? " current" : "");
+      s.textContent = LABEL[k];
+      return s;
+    }));
+  }
+
+  function newRound() {
+    current = pickCommand();
+    cursor = 0;
+    renderCommand();
+  }
+
+  function reset(diff = difficulty) {
+    difficulty = diff;
+    timeLeft = DIFF[diff].time;
+    cleared = 0;
+    combo = 0;
+    particles = [];
+    gameOver = false;
+    gridSpeed = 34 + Number(diff) * 0.18;
+    updateHud();
+    diffButtons.forEach(b => b.classList.toggle("active", b.dataset.diff === diff));
+    newRound();
+  }
+
+  function updateHud() {
+    timerEl.textContent = Math.max(0, timeLeft).toFixed(1);
+    clearedEl.textContent = cleared;
+    comboEl.textContent = combo;
+  }
+
+  function press(input) {
+    if (gameOver) {
+      reset();
+      return;
+    }
+    if (!current) newRound();
+    flashKey(input);
+    if (input === current.seq[cursor]) {
+      cursor += 1;
+      if (cursor >= current.seq.length) success();
+      else renderCommand();
+    } else {
+      combo = 0;
+      cursor = 0;
+      timeLeft = Math.max(0, timeLeft - DIFF[difficulty].wrong);
+      toastText("MISS", "#6b7280");
+      renderCommand();
+      spawnParticles(W / 2, H / 2, 18, "#b9b9b9", 120);
+    }
+    updateHud();
+  }
+
+  function success() {
+    cleared += 1;
+    combo += 1;
+    timeLeft += Math.max(0.3, 1.2 - Number(difficulty) / 180);
+    const color = COLORS[cleared % COLORS.length];
+    document.documentElement.style.setProperty("--accent", color);
+    ring.style.setProperty("--spin", (cleared * 47) + "deg");
+    ring.classList.remove("burst");
+    void ring.offsetWidth;
+    ring.classList.add("burst");
+    setTimeout(() => ring.classList.remove("burst"), 360);
+    spawnParticles(W / 2, H / 2, 92, color, 360);
+    gridAngle = Math.random() * Math.PI * 2;
+    gridHue = Math.floor(Math.random() * 360);
+    toastText(combo >= 5 ? combo + " COMBO" : "NICE!", color);
+    newRound();
+  }
+
+  function toastText(text, color) {
+    toast.textContent = text;
+    toast.style.color = color;
+    toast.classList.remove("show");
+    void toast.offsetWidth;
+    toast.classList.add("show");
+  }
+
+  function spawnParticles(x, y, count, color, power) {
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = (0.22 + Math.random() * 0.78) * power;
+      particles.push({
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        life: 0.45 + Math.random() * 0.55,
+        max: 0.45 + Math.random() * 0.55,
+        size: 2 + Math.random() * 7,
+        color: Math.random() < 0.55 ? color : COLORS[Math.floor(Math.random() * COLORS.length)]
+      });
+    }
+  }
+
+  function flashKey(input) {
+    const el = keyButtons.find(b => b.dataset.key === input);
+    if (!el) return;
+    el.classList.add("pressed");
+    setTimeout(() => el.classList.remove("pressed"), 90);
+  }
+
+  function drawGrid(dt) {
+    const dx = Math.cos(gridAngle) * gridSpeed * dt;
+    const dy = Math.sin(gridAngle) * gridSpeed * dt;
+    const gap = Math.max(24, Math.min(48, W / 18));
+    ctx.save();
+    ctx.globalAlpha = 0.42;
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(Math.sin(performance.now() / 5000) * 0.08);
+    ctx.translate(-W / 2, -H / 2);
+    for (const p of gridDots) {
+      p.x += dx / p.z;
+      p.y += dy / p.z;
+      if (p.x > W + gap * 2) p.x -= W + gap * 4;
+      if (p.x < -gap * 2) p.x += W + gap * 4;
+      if (p.y > H + gap * 2) p.y -= H + gap * 4;
+      if (p.y < -gap * 2) p.y += H + gap * 4;
+      const wave = Math.sin(performance.now() / 460 + p.phase) * 10;
+      const scale = 1.9 / (p.z + 1.1);
+      const px = W / 2 + (p.x - W / 2) * (1 + 0.18 / p.z);
+      const py = H / 2 + (p.y - H / 2) * (1 + 0.18 / p.z) + wave;
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${gridHue + p.z * 35}, 84%, 56%, ${0.28 / p.z})`;
+      ctx.arc(px, py, scale * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function updateParticles(dt) {
+    for (const p of particles) {
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= Math.pow(0.04, dt);
+      p.vy = p.vy * Math.pow(0.08, dt) + 36 * dt;
+    }
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  function drawParticles() {
+    ctx.save();
+    ctx.globalCompositeOperation = "multiply";
+    for (const p of particles) {
+      const a = Math.max(0, p.life / p.max);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * (0.7 + (1 - a) * 0.9), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function loop(t) {
+    const dt = Math.min(0.04, (t - lastT) / 1000 || 0);
+    lastT = t;
+    ctx.clearRect(0, 0, W, H);
+    drawGrid(dt);
+    updateParticles(dt);
+    drawParticles();
+    if (!gameOver) {
+      timeLeft -= dt;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        gameOver = true;
+        toastText("FINISH " + cleared, "#232323");
+      }
+      updateHud();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  function onPointerDown(ev) {
+    const btn = ev.target.closest("[data-key]");
+    if (!btn) return;
+    ev.preventDefault();
+    press(btn.dataset.key);
+  }
+
+  document.addEventListener("pointerdown", onPointerDown, { passive: false });
+  document.addEventListener("keydown", ev => {
+    const input = KEYMAP[ev.code];
+    if (!input || ev.repeat) return;
+    ev.preventDefault();
+    press(input);
+  });
+  diffButtons.forEach(btn => btn.addEventListener("click", () => reset(btn.dataset.diff)));
+  window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", () => setTimeout(resize, 150));
+
+  resize();
+  reset("50");
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
