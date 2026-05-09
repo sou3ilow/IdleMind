@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#101018" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" href="./icon.svg" type="image/svg+xml" />
+<title>IdleMind Arcade</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root {
+    color-scheme: dark;
+    --bg: #0a0a10;
+    --panel: rgba(255, 255, 255, 0.09);
+    --line: rgba(255, 255, 255, 0.16);
+    --ink: #fff;
+    --muted: rgba(255, 255, 255, 0.66);
+    --pink: #ff2d8b;
+    --cyan: #22d3ee;
+    --gold: #ffda3a;
+  }
+  html, body {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(255, 45, 139, 0.32), transparent 30vw),
+      radial-gradient(circle at 85% 20%, rgba(34, 211, 238, 0.26), transparent 34vw),
+      radial-gradient(circle at 50% 92%, rgba(255, 218, 58, 0.18), transparent 34vw),
+      var(--bg);
+    color: var(--ink);
+    font-family: ui-rounded, "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    overscroll-behavior: none;
+  }
+  body {
+    display: grid;
+    place-items: center;
+    padding: max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  }
+  main {
+    width: min(920px, 100%);
+  }
+  .hero {
+    border: 1px solid var(--line);
+    border-radius: 30px;
+    padding: clamp(22px, 5vw, 52px);
+    background: linear-gradient(135deg, rgba(255,255,255,0.13), rgba(255,255,255,0.055));
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(18px);
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(34px, 9vw, 82px);
+    line-height: 0.9;
+    letter-spacing: -0.07em;
+  }
+  .lead {
+    max-width: 640px;
+    margin: 18px 0 0;
+    color: var(--muted);
+    font-size: clamp(15px, 2vw, 19px);
+    line-height: 1.7;
+  }
+  .install-note {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border: 1px dashed rgba(255,255,255,0.24);
+    border-radius: 16px;
+    color: rgba(255,255,255,0.78);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .games {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 28px;
+  }
+  .game {
+    position: relative;
+    min-height: 210px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: var(--panel);
+    color: #fff;
+    text-decoration: none;
+    transform: translateZ(0);
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  }
+  .game::before {
+    content: "";
+    position: absolute;
+    inset: -30%;
+    background: var(--art);
+    opacity: 0.8;
+    transition: transform 0.28s ease;
+  }
+  .game:hover, .game:focus-visible {
+    border-color: rgba(255,255,255,0.42);
+    background: rgba(255,255,255,0.14);
+    transform: translateY(-3px);
+    outline: none;
+  }
+  .game:hover::before, .game:focus-visible::before { transform: scale(1.06) rotate(3deg); }
+  .game > * { position: relative; z-index: 1; }
+  .tag {
+    width: fit-content;
+    margin-bottom: auto;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.34);
+    color: rgba(255,255,255,0.74);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .game h2 {
+    margin: 44px 0 7px;
+    font-size: clamp(23px, 4vw, 38px);
+    line-height: 1;
+  }
+  .game p {
+    margin: 0;
+    color: rgba(255,255,255,0.72);
+    line-height: 1.5;
+  }
+  .line-guard { --art: radial-gradient(circle at 28% 24%, var(--pink), transparent 19%), radial-gradient(circle at 72% 76%, var(--cyan), transparent 22%), linear-gradient(140deg, rgba(255,45,139,0.55), rgba(34,211,238,0.42)); }
+  .command { --art: radial-gradient(circle at 70% 22%, var(--gold), transparent 20%), radial-gradient(circle at 28% 76%, #7c5cff, transparent 23%), linear-gradient(140deg, rgba(255,77,166,0.48), rgba(255,218,58,0.38)); }
+  @media (max-width: 680px) {
+    body { place-items: stretch; }
+    .games { grid-template-columns: 1fr; }
+    .game { min-height: 174px; }
+  }
+</style>
+</head>
+<body>
+<main class="hero">
+  <h1>IdleMind<br>Arcade</h1>
+  <p class="lead">ホーム画面に追加してPWAとして起動すると、対応ブラウザではアドレスバーなしの全画面表示で遊べます。</p>
+  <p class="install-note">通常のブラウザタブではアドレスバー自体は消せません。Chrome/Edge は「インストール」、iPhone/iPad は共有メニューの「ホーム画面に追加」から起動してください。</p>
+  <nav class="games" aria-label="ゲーム一覧">
+    <a class="game line-guard" href="./2b.html">
+      <span class="tag">b2</span>
+      <h2>Line Guard Duel</h2>
+      <p>上下に分かれてラインで守る2人対戦。</p>
+    </a>
+    <a class="game command" href="./kbd.html">
+      <span class="tag">kbd</span>
+      <h2>Command Rush KBD</h2>
+      <p>方向キーとABXYを連続入力するコマンドラッシュ。</p>
+    </a>
+  </nav>
+</main>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js");
+  });
+}
+</script>
+</body>
+</html>
