@@ -304,14 +304,15 @@
       <button class="key abxy a" data-key="A" aria-label="A">A</button>
     </div>
   </section>
-  <div class="hint">横持ち・両手操作 / キーボード: 矢印 + A B X Y / ミスで少しタイムロス</div>
+  <div class="hint">横持ち・タップ/スワイプ操作 / キーボード: 矢印 + A B X Y / ミスで少しタイムロス</div>
   <div class="toast" id="toast">NICE!</div>
-  <div class="rotate">スマホを横向きにして、左手で十字キー・右手でABXYを入力！</div>
+  <div class="rotate">スマホを横向きにして、タップまたはスワイプでコマンド入力！</div>
 </div>
 <script>
 (() => {
   "use strict";
 
+  const app = document.getElementById("app");
   const canvas = document.getElementById("fx");
   const ctx = canvas.getContext("2d");
   const ring = document.getElementById("ring");
@@ -356,6 +357,8 @@
   let combo = 0;
   let lastT = performance.now();
   let particles = [];
+  let swipeTrails = [];
+  const activeSwipes = new Map();
   let gridDots = [];
   let gridAngle = 0.25;
   let gridHue = 310;
@@ -412,6 +415,8 @@
     cleared = 0;
     combo = 0;
     particles = [];
+    swipeTrails = [];
+    activeSwipes.clear();
     gameOver = false;
     gridSpeed = 34 + Number(diff) * 0.18;
     updateHud();
@@ -535,6 +540,128 @@
     particles = particles.filter(p => p.life > 0);
   }
 
+  function keyFromPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    return el?.closest?.("[data-key]") || null;
+  }
+
+  function trailColor() {
+    const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+    return accent || COLORS[0];
+  }
+
+  function makeSwipeSample(x, y, t, dwell = 0) {
+    return { x, y, t, dwell };
+  }
+
+  function addSwipeSample(trail, x, y, t) {
+    const last = trail.points[trail.points.length - 1];
+    if (last) {
+      const dx = x - last.x;
+      const dy = y - last.y;
+      const distance = Math.hypot(dx, dy);
+      const elapsed = Math.max(0, t - last.t);
+      if (distance < 8) {
+        last.x = last.x * 0.82 + x * 0.18;
+        last.y = last.y * 0.82 + y * 0.18;
+        last.t = t;
+        last.dwell = Math.min(0.9, last.dwell + elapsed);
+        return;
+      }
+      trail.points.push(makeSwipeSample(x, y, t, Math.min(0.2, elapsed * 0.6)));
+    } else {
+      trail.points.push(makeSwipeSample(x, y, t, 0.08));
+    }
+    if (trail.points.length > 90) trail.points.splice(0, trail.points.length - 90);
+  }
+
+  function beginSwipe(ev, btn) {
+    const t = performance.now() / 1000;
+    const trail = {
+      id: ev.pointerId,
+      points: [makeSwipeSample(ev.clientX, ev.clientY, t, 0.16)],
+      color: trailColor(),
+      active: true,
+      releasedAt: null,
+      lastKey: btn.dataset.key
+    };
+    activeSwipes.set(ev.pointerId, trail);
+    swipeTrails.push(trail);
+    press(btn.dataset.key);
+    app.setPointerCapture?.(ev.pointerId);
+  }
+
+  function updateSwipe(ev) {
+    const trail = activeSwipes.get(ev.pointerId);
+    if (!trail) return;
+    ev.preventDefault();
+    const t = performance.now() / 1000;
+    addSwipeSample(trail, ev.clientX, ev.clientY, t);
+    const btn = keyFromPoint(ev.clientX, ev.clientY);
+    const key = btn?.dataset.key || null;
+    if (key && key !== trail.lastKey) {
+      trail.color = trailColor();
+      press(key);
+    }
+    trail.lastKey = key;
+  }
+
+  function endSwipe(ev) {
+    const trail = activeSwipes.get(ev.pointerId);
+    if (!trail) return;
+    ev.preventDefault();
+    const t = performance.now() / 1000;
+    addSwipeSample(trail, ev.clientX, ev.clientY, t);
+    trail.active = false;
+    trail.releasedAt = t;
+    activeSwipes.delete(ev.pointerId);
+    app.releasePointerCapture?.(ev.pointerId);
+  }
+
+  function drawSwipeTrails(now) {
+    ctx.save();
+    ctx.globalCompositeOperation = "multiply";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (const trail of swipeTrails) {
+      const fade = trail.active ? 1 : Math.max(0, 1 - (now - trail.releasedAt) / 0.22);
+      if (fade <= 0 || trail.points.length === 0) continue;
+      for (let i = 1; i < trail.points.length; i++) {
+        const prev = trail.points[i - 1];
+        const point = trail.points[i];
+        const isTail = trail.active && i === trail.points.length - 1;
+        const liveDwell = isTail ? now - point.t : 0;
+        const age = isTail ? 0 : Math.max(0, now - point.t);
+        const dwell = Math.min(1, (prev.dwell + point.dwell + liveDwell) * 0.85);
+        const alpha = fade * Math.max(0, 0.14 + dwell * 0.72 - age * 0.05);
+        if (alpha <= 0.02) continue;
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = trail.color;
+        ctx.lineWidth = 10 + dwell * 24;
+        ctx.beginPath();
+        ctx.moveTo(prev.x, prev.y);
+        ctx.lineTo(point.x, point.y);
+        ctx.stroke();
+      }
+      for (let i = 0; i < trail.points.length; i++) {
+        const point = trail.points[i];
+        const isTail = trail.active && i === trail.points.length - 1;
+        const liveDwell = isTail ? now - point.t : 0;
+        const age = isTail ? 0 : Math.max(0, now - point.t);
+        const dwell = Math.min(1, (point.dwell + liveDwell) * 1.45);
+        const alpha = fade * Math.max(0, 0.18 + dwell * 0.74 - age * 0.05);
+        if (alpha <= 0.02) continue;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = trail.color;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 8 + dwell * 18, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+    swipeTrails = swipeTrails.filter(trail => trail.active || now - trail.releasedAt < 0.25);
+  }
+
   function drawParticles() {
     ctx.save();
     ctx.globalCompositeOperation = "multiply";
@@ -554,6 +681,7 @@
     lastT = t;
     ctx.clearRect(0, 0, W, H);
     drawGrid(dt);
+    drawSwipeTrails(t / 1000);
     updateParticles(dt);
     drawParticles();
     if (!gameOver) {
@@ -572,10 +700,13 @@
     const btn = ev.target.closest("[data-key]");
     if (!btn) return;
     ev.preventDefault();
-    press(btn.dataset.key);
+    beginSwipe(ev, btn);
   }
 
   document.addEventListener("pointerdown", onPointerDown, { passive: false });
+  document.addEventListener("pointermove", updateSwipe, { passive: false });
+  document.addEventListener("pointerup", endSwipe, { passive: false });
+  document.addEventListener("pointercancel", endSwipe, { passive: false });
   document.addEventListener("keydown", ev => {
     const input = KEYMAP[ev.code];
     if (!input || ev.repeat) return;
