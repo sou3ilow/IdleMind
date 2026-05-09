@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">IdleMind Arcade icon</title>
+  <desc id="desc">A neon arcade badge with a white crosshair over pink, cyan, and gold gradients.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="70%">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="0.18" stop-color="#22d3ee" />
+      <stop offset="0.52" stop-color="#ff2d8b" />
+      <stop offset="1" stop-color="#0a0a10" />
+    </radialGradient>
+    <linearGradient id="shine" x1="96" y1="64" x2="416" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.82" />
+      <stop offset="0.42" stop-color="#ffda3a" stop-opacity="0.36" />
+      <stop offset="1" stop-color="#7c5cff" stop-opacity="0.58" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#0a0a10" />
+  <circle cx="256" cy="256" r="202" fill="url(#bg)" />
+  <circle cx="256" cy="256" r="202" fill="none" stroke="url(#shine)" stroke-width="28" />
+  <path d="M256 108v296M108 256h296" stroke="#fff" stroke-width="44" stroke-linecap="round" />
+  <circle cx="256" cy="256" r="72" fill="none" stroke="#fff" stroke-width="26" />
+  <circle cx="372" cy="140" r="24" fill="#ffda3a" />
+</svg>

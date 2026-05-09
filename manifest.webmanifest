@@ -1,0 +1,32 @@
+{
+  "name": "IdleMind Arcade",
+  "short_name": "IdleMind",
+  "description": "Fullscreen PWA launcher for IdleMind browser games.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "background_color": "#0a0a10",
+  "theme_color": "#101018",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Line Guard Duel",
+      "short_name": "b2",
+      "url": "./2b.html"
+    },
+    {
+      "name": "Command Rush KBD",
+      "short_name": "kbd",
+      "url": "./kbd.html"
+    }
+  ]
+}
